@@ -18,11 +18,13 @@ def run_nmap(ip_address):
     print(f"[!] Launching Counter-Scan on: {ip_address}")
     
     try:
-        # -O: OS Detection
-        # -sS: Stealth SYN Scan
-        # --top-ports 1000: Scan top 1000 ports (Faster than -p-)
-        # -T4: Aggressive timing (Faster)
-        nm.scan(ip_address, arguments='-O -sS --top-ports 1000 -T4')
+        # STEALTH MODIFICATIONS:
+        # -sS: Stealth SYN Scan (Half-open, harder to log)
+        # -O: OS Detection (We keep this for forensics, though it adds some noise)
+        # --top-ports 50: Only scan top 50 common ports (Drastic noise reduction vs 1000)
+        # -T2: "Polite" timing template (Slows down to avoid flooding the network)
+        
+        nm.scan(ip_address, arguments='-sS -O --top-ports 50 -T2')
         
         # Extract Results
         if ip_address in nm.all_hosts():
@@ -45,7 +47,7 @@ def run_nmap(ip_address):
             database.update_suspect_scan(ip_address, ports_str, os_info)
             print(f"[+] Scan Complete for {ip_address}: OS={os_info}, Ports={ports_str}")
         else:
-            print(f"[-] Scan Failed: Host {ip_address} appears down.")
+            print(f"[-] Scan Failed: Host {ip_address} appears down or blocked our scan.")
 
     except Exception as e:
         print(f"[ERROR] Nmap failed for {ip_address}: {e}")
@@ -72,8 +74,12 @@ def process_suspect(ip_address):
     else:
         # Database returns string, convert to datetime
         # suspect_row[2] is 'last_scan' column
-        last_db_scan = datetime.strptime(suspect_row[2], "%Y-%m-%d %H:%M:%S")
-        if current_time - last_db_scan > timedelta(minutes=10):
+        try:
+            last_db_scan = datetime.strptime(suspect_row[2], "%Y-%m-%d %H:%M:%S")
+            if current_time - last_db_scan > timedelta(minutes=10):
+                should_scan = True
+        except ValueError:
+            # If DB has invalid time format, force rescan
             should_scan = True
 
     # 3. Trigger Scan if needed
