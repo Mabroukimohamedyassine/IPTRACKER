@@ -1,0 +1,10 @@
+# Ignore the database (Security & Size)
+data/forensics.db
+data/*.db
+
+# Ignore Python compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore Windows system files
+Thumbs.db
