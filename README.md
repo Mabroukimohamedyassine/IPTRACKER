@@ -2,7 +2,9 @@
 
 **A Hybrid Network Surveillance & Active Defense System for Linux.**
 
-> **⚠️ LEGAL DISCLAIMER:** This tool performs **active network scanning** (Nmap) against incoming IP addresses. Ensure you have legal authorization to scan the networks interacting with your server. The author is not responsible for misuse.
+> **⚠️ LEGAL & SECURITY DISCLAIMER:**
+> 1. **Active Scanning:** This tool performs **active Nmap scans** against incoming IP addresses. Ensure you have legal authorization to scan the networks interacting with your server.
+> 2. **Spoofing Risk:** The current prototype relies on Source IP headers. In an open internet environment, spoofed packets (Reflection Attacks) could cause the server to scan innocent targets. **Recommended for use in controlled environments (Honeypots/Internal Networks).**
 
 ---
 
@@ -38,6 +40,7 @@ graph TD
     D -- No --> F[Ignore]
     E -->|Nmap Scan| G[Attacker IP]
     G -->|Result| H[(Suspects DB)]
+
 🛠️ Installation
 This tool is optimized for Kali Linux, Ubuntu, and Debian.
 
@@ -112,5 +115,10 @@ Error: Database Locked
 
 Fix: The system handles this automatically with a 10-second timeout. If it persists, ensure no other program has the .db file open in "Write" mode.
 
+📜 Known Limitations (Proof of Concept)
+IP Spoofing: This tool blindly trusts the Source IP header. In a production environment, this would require TCP Handshake verification to avoid scanning spoofed targets.
+
+Network Noise: Active scanning creates significant network traffic and will likely be detected by the intruder's IDS.
+
 📜 License
-Open Source. strictly for educational and defensive forensic usage.
+Open Source. Strictly for educational and defensive forensic usage
