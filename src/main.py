@@ -46,9 +46,32 @@ def packet_callback(packet):
             database.log_packet(src_ip, src_mac, dst_port, protocol, payload_size)
 
             # 2. Trigger Counter-Intel (Nmap)
-            # We do NOT scan ourselves (loopback)
+            # ANTI-SPOOFING MECHANISM:
+            # We do NOT scan ourselves (loopback).
+            # We ONLY scan if the attacker has completed a TCP Handshake (ACK flag).
+            
             if src_ip != "127.0.0.1": 
-                scanner.process_suspect(src_ip)
+                should_scan = False
+
+                if TCP in packet:
+                    # Get TCP Flags (S=SYN, A=ACK, P=PUSH, R=RESET, F=FIN)
+                    tcp_flags = packet[TCP].flags
+                    
+                    # LOGIC:
+                    # If 'S' (SYN) is the only flag, it's just a request (could be spoofed). Ignore scan.
+                    # If 'A' (ACK) is present, the connection is established. They are real. Scan them.
+                    if 'A' in str(tcp_flags):
+                        should_scan = True
+                        print(f"[+] Verified Connection (ACK) from {src_ip} - Authorizing Scan.")
+                
+                elif UDP in packet:
+                    # UDP is connectionless (no handshake), so we have to trust the IP.
+                    # We scan UDP packets to catch things like DNS attacks.
+                    should_scan = True
+
+                # Execute the scan if criteria met
+                if should_scan:
+                    scanner.process_suspect(src_ip)
 
     except Exception as e:
         # Don't crash the sniffer on a bad packet
@@ -61,6 +84,7 @@ def start_sniffing(interface=None):
     print("==========================================")
     print(f"[*] INTELLIGENCE TRACKER STARTED")
     print(f"[*] Database: Initialized")
+    print(f"[*] Anti-Spoofing: ENABLED (TCP ACK Check)")
     print(f"[*] Interface: {interface if interface else 'Default'}")
     print("==========================================")
     
